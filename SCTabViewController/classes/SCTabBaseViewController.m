@@ -8,7 +8,9 @@
 
 #import "SCTabBaseViewController.h"
 
-@interface SCTabBaseViewController ()
+#import "SCTabBaseView.h"
+
+@interface SCTabBaseViewController () <SCTabBaseViewDelegate>
 
 @end
 
@@ -26,13 +28,30 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-	// Do any additional setup after loading the view.
 }
 
 - (void)didReceiveMemoryWarning
 {
     [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
 }
+
+#pragma mark - SCTabBaseViewDelegate
+
+- (void)SCScrollViewDidScroll:(UIScrollView *)scrollView {
+    
+}
+
+- (void)SCScrollViewDidEndDecelerating:(UIScrollView *)scrollView {
+    
+}
+
+- (void)SCScrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView {
+    
+}
+
+- (void)SCScrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
+    
+}
+
 
 @end

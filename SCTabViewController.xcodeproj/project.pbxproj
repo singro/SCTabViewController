@@ -213,14 +213,14 @@
 		29575D431863EE8A00DD5217 /* View */ = {
 			isa = PBXGroup;
 			children = (
-				29575D441863EE8A00DD5217 /* SCDemoTabOneView.h */,
-				29575D451863EE8A00DD5217 /* SCDemoTabOneView.m */,
-				29575D461863EE8A00DD5217 /* SCDemoTabThreeView.h */,
-				29575D471863EE8A00DD5217 /* SCDemoTabThreeView.m */,
-				29575D481863EE8A00DD5217 /* SCDemoTabTwoView.h */,
-				29575D491863EE8A00DD5217 /* SCDemoTabTwoView.m */,
 				29575D4A1863EE8A00DD5217 /* SCDemoTopView.h */,
 				29575D4B1863EE8A00DD5217 /* SCDemoTopView.m */,
+				29575D441863EE8A00DD5217 /* SCDemoTabOneView.h */,
+				29575D451863EE8A00DD5217 /* SCDemoTabOneView.m */,
+				29575D481863EE8A00DD5217 /* SCDemoTabTwoView.h */,
+				29575D491863EE8A00DD5217 /* SCDemoTabTwoView.m */,
+				29575D461863EE8A00DD5217 /* SCDemoTabThreeView.h */,
+				29575D471863EE8A00DD5217 /* SCDemoTabThreeView.m */,
 			);
 			path = View;
 			sourceTree = "<group>";
