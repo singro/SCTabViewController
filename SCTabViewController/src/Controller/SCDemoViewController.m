@@ -9,6 +9,7 @@
 #import "SCDemoViewController.h"
 
 #import <BlocksKit+UIKit.h>
+#import <AFNetworking.h>
 
 #import "SCDemoTopView.h"
 
@@ -28,6 +29,28 @@
         self.topViewHeight = 155.0f;
         self.topBackgroundImage = [UIImage imageNamed:@"image1"];
         
+        
+        __weak typeof(SCDemoViewController) *weakSelf = self;
+        self.refreshHandleBlock = ^(id sender) {
+            NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+            AFURLSessionManager *manager = [[AFURLSessionManager alloc] initWithSessionConfiguration:configuration];
+            
+            NSURL *URL = [NSURL URLWithString:@"http://daswallpaper.de/wp-content/gallery/das_wallpaper_startseite/science_fiction_18-hd-wallpaper-kostenlos-1920x1080.jpg"];
+            NSURLRequest *request = [NSURLRequest requestWithURL:URL];
+            
+            NSProgress *progress =[[NSProgress alloc] init];
+            NSURLSessionDownloadTask *downloadTask = [manager downloadTaskWithRequest:request progress:&progress destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
+                NSURL *documentsDirectoryPath = [NSURL fileURLWithPath:[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject]];
+                return [documentsDirectoryPath URLByAppendingPathComponent:[response suggestedFilename]];
+            } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
+                NSLog(@"File downloaded to: %@", filePath);
+            }];
+            
+            weakSelf.task = downloadTask;
+            
+            [downloadTask resume];
+        };
+
     }
     return self;
 }
@@ -46,8 +69,10 @@
     [testButton bk_whenTapped:^{
         if (topView.expend) {
             self.topViewHeight = 155.0f;
+            testButton.frame = CGRectMake(50, 80, 200, 30);
         } else {
             self.topViewHeight = 300.0f;
+            testButton.frame = CGRectMake(50, 80, 200, 120);
         }
         topView.expend = !topView.expend;
     }];

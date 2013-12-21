@@ -15,6 +15,9 @@
 @property (nonatomic, copy)            NSArray *tabClassNameArray;
 @property (nonatomic, copy)            NSArray *tabTitles;    // count 1 for no tab
 
+// Network
+@property (nonatomic, strong) NSURLSessionTask *task;
+@property (nonatomic, strong) void (^refreshHandleBlock)(id sender);
 
 // Optional Setters
 @property (nonatomic)                  CGFloat  topViewHeight;     // 230.0f for default

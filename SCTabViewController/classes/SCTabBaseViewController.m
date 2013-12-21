@@ -10,6 +10,8 @@
 
 #import <BlocksKit.h>
 #import <BlocksKit+UIKit.h>
+//#import "SPUIImage+Blur.h"
+//#import <objc/runtime.h>
 
 #import "SCTabBaseView.h"
 
@@ -20,7 +22,17 @@
 #define kTabBarButtonBackgroundColorNormal         1.00f
 #define kTabBarButtonBackgroundColorHeighlighted   0.95f
 
-#define kImageBackgroundHeight                350.0f
+#define kImageBackgroundHeight                     350.0f
+
+#define kRefreshImageHeight                        18.0f
+#define kRefreshImagePositionX                     290.0f
+
+#define kAnimationDuration                         0.3f
+
+
+static NSString * kRefreshRotationAnimation = @"RefreshRotationAnimation";
+static NSString * kLoadingRotationAnimation = @"LoadingRotationAnimation";
+static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedContext;
 
 
 @interface SCTabBaseViewController () <SCTabBaseViewDelegate, UIScrollViewDelegate>
@@ -32,6 +44,12 @@
 
 /* Private properties */
 @property (nonatomic, strong) NSMutableArray  *addedTopViewFrameArray;
+
+// Refresh View
+@property (nonatomic, strong) UIImageView *refreshImageView;
+@property (nonatomic, strong) UIImageView *loadingImageView;
+@property (nonatomic, strong) UILabel     *refreshLabel;
+@property (nonatomic, assign) BOOL isRefreshing;
 
 // topView
 @property (nonatomic, strong) UIImageView     *topBackgroundImageView;
@@ -85,10 +103,12 @@
         self.tabBarButtonBorderColor = [UIColor colorWithWhite:0.852 alpha:1.000];
         self.tabBarTextColorNormal = [UIColor colorWithWhite:kTabBarTextColorNormal alpha:1.000];
         self.tabBarTextColorHeighlighted = [UIColor colorWithWhite:kTabBarTextColorHeighlighted alpha:1.000];
-        self.tabBarSectionLineColor = [UIColor redColor];
+        self.tabBarSectionLineColor = [UIColor colorWithRed:1.000 green:0.336 blue:0.162 alpha:1.000];
         self.tabBarTextFont = [UIFont systemFontOfSize:13.0f];
         
         self.needBlur = NO;
+        
+        
     }
     return self;
 }
@@ -104,63 +124,27 @@
         
         self.edgesForExtendedLayout = UIRectEdgeNone;
         self.automaticallyAdjustsScrollViewInsets = YES;
-        __weak typeof(SCTabBaseViewController) *weakSelf = self;
         
         self.numberOfTabs = self.tabClassNameArray.count;
         self.currentIndex = 0;
         self.currentIndexTableHeight = 0.0f;
         self.isChangingContentInset = NO;
+        self.isRefreshing = NO;
         
         [self setupTopBackgroundImageView];
         [self setupTopView];
         [self setupTabBarView];
         [self setupTabView];
+        [self setupRefreshView];
         
         [self.view addSubview:self.topBackgroundContainView];
         [self.view addSubview:self.topView];
         [self.view addSubview:self.scrollView];
         [self.view addSubview:self.tabBarView];
+        [self.view addSubview:self.refreshImageView];
+        [self.view addSubview:self.refreshLabel];
+        [self.view addSubview:self.loadingImageView];
         
-        
-        
-        // topView
-        
-//        self.topLineView = [[UIView alloc] init];
-//        [self.view addSubview:self.topLineView];
-//        
-//        self.topLineDownloadProcessView = [[UIView alloc] init];
-//        self.topLineDownloadProcessView.backgroundColor = [UIColor colorWithRed:0.122 green:0.610 blue:0.992 alpha:1.000];
-//        [self.topLineView addSubview:self.topLineDownloadProcessView];
-        
-        // tabBarView
-        
-        // Top ScrollView
-        
-//        // Refresh ImagView
-//        self.refreshImageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"refresh"]];
-//        self.refreshImageView.contentMode = UIViewContentModeScaleAspectFill;
-//        [self.view addSubview:self.refreshImageView];
-//        self.loadingImageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"refresh"]];
-//        self.loadingImageView.contentMode = UIViewContentModeScaleAspectFill;
-//        [self.view addSubview:self.loadingImageView];
-//        self.loadingImageView.hidden = YES;
-//        // Animation
-//        [self.refreshImageView.layer addAnimation:[self refreshAnimation] forKey:kRefreshRotationAnimation];
-//        self.refreshImageView.layer.speed = 0.0f;
-        //        self.loadingImageView.layer.repeatCount = 40;
-        
-        
-        
-//        self.testButton = [UIButton buttonWithType:UIButtonTypeCustom];
-//        self.testButton.backgroundColor =  [UIColor blackColor];
-//        [self.testButton setTitle:@"Yo!" forState:UIControlStateNormal];
-//        [self.view addSubview:self.testButton];
-//        self.testButton.frame =  (CGRect){250, 70, 60, 40};
-//        [self.testButton bk_whenTapped:^{
-//            NSLog(@"tapped");
-//            weakSelf.topViewHeight = 320.0f;
-//        }];
-
     }
     
     
@@ -184,6 +168,10 @@
 }
 
 #pragma mark - setters
+- (void)setTask:(NSURLSessionTask *)task {
+    [task addObserver:self forKeyPath:@"state" options:0 context:AFTaskCountOfBytesReceivedContext];
+    [task addObserver:self forKeyPath:@"countOfBytesReceived" options:0 context:AFTaskCountOfBytesReceivedContext];
+}
 
 - (void)setTopViewHeight:(CGFloat)topViewHeight  {
     CGFloat previousTopViewHeight = self.topViewHeight;
@@ -222,9 +210,9 @@
     
     // set tableViews
     [self visitTableViews:^(UITableView *tableView, NSInteger index) {
-        if (index == self.currentIndex) {
-            NSLog(@"offset:%.f", tableView.contentOffset.y);
-        }
+//        if (index == self.currentIndex) {
+//            NSLog(@"offset:%.f", tableView.contentOffset.y);
+//        }
         CGFloat offsetOriginX = tableView.contentOffset.x;
         CGFloat offsetOriginY = tableView.contentOffset.y;
         [UIView animateWithDuration:0.3f animations:^{
@@ -276,6 +264,25 @@
     });
     [self.topBackgroundContainView addSubview:self.topBackgroundImageView];
     [self.topBackgroundImageView addSubview:self.backgroundWhiteView];
+}
+
+- (void)setupRefreshView {
+    self.refreshLabel = [[UILabel alloc] init];
+    self.refreshLabel.textColor = [UIColor grayColor];
+    self.refreshLabel.textAlignment = NSTextAlignmentCenter;
+    self.refreshLabel.font = [UIFont systemFontOfSize:13.0f];
+    
+    self.refreshImageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"refresh"]];
+    self.refreshImageView.contentMode = UIViewContentModeScaleAspectFill;
+    
+    self.loadingImageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"refresh"]];
+    self.loadingImageView.contentMode = UIViewContentModeScaleAspectFill;
+    [self.view addSubview:self.loadingImageView];
+    self.loadingImageView.hidden = YES;
+    
+    // Animation
+    [self.refreshImageView.layer addAnimation:[self refreshAnimation] forKey:kRefreshRotationAnimation];
+    self.refreshImageView.layer.speed = 0.0f;
 }
 
 - (void)setupTopView {
@@ -333,6 +340,7 @@
 - (void)setupTabView {
     // ScrollView
     self.scrollView = [[UIScrollView alloc] init];
+    self.scrollView.backgroundColor = [UIColor clearColor];
     self.scrollView.pagingEnabled = YES;
     self.scrollView.showsHorizontalScrollIndicator = NO;
     self.scrollView.delegate = self;
@@ -382,6 +390,7 @@
 - (void)viewWillLayoutSubviews {
 //    CGFloat naviHeight = 0.0f; //CGRectGetHeight(self.navigationController.navigationBar.frame);
     CGFloat screenHeight = CGRectGetHeight([[UIScreen mainScreen] applicationFrame]);
+//    NSLog(@"barPosition: %d height: %.f", self.navigationController.navigationBar.barPosition, screenHeight);
     if (self.navigationController.navigationBar.barPosition == UIBarPositionTopAttached) {
         screenHeight -= 44.0f;
     } else {
@@ -395,6 +404,11 @@
 
     // Top View
     self.topView.frame = (CGRect){0, 0, 320, self.topViewHeight};
+    
+    // refreshView
+    self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
+    self.refreshLabel.frame = (CGRect){70, -30, 180, kRefreshImageHeight};
+    self.loadingImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
     
     // tabBarView
     self.tabBarView.frame = (CGRect){0, self.topViewHeight - self.tabBarHeight, 320, self.tabBarHeight};
@@ -413,44 +427,38 @@
 
 - (void)SCScrollViewDidScroll:(UIScrollView *)scrollView {
     CGFloat changedOffset = -(scrollView.contentOffset.y + self.topViewHeight);
-        NSLog(@"changedOffset:    %f", changedOffset);
     if (self.isChangingContentInset) {
         return;
     }
-//    if (self.isRefreshing) {
+
+    [self visitTableViews:^(UITableView *tableView, NSInteger index) {
+        tableView.contentOffset = scrollView.contentOffset;
+    }];
+    
+    if (self.isRefreshing) {
 //        self.topLineView.frame = (CGRect){0, 0, 320, kProgressLineHeight};
-//    } else {
-//        if (changedOffset > 60.0f) {
-//            
-//            self.topLineView.frame = (CGRect){0, 0, 320, kProgressLineHeight};
-//            self.topLineView.backgroundColor = [UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:1.0f];
-//            self.refreshImageView.layer.timeOffset = changedOffset / 180.0f;
-//            self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30 + 60.0f * 0.8, kRefreshImageHeight, kRefreshImageHeight};
-//            
-//        } else if (changedOffset > 0 && changedOffset <= 60.0f) {
-//            
-//            self.topLineView.frame = (CGRect){320/60.0f*changedOffset-320, 0, 320, kProgressLineHeight};
-//            self.topLineView.backgroundColor = [UIColor colorWithRed:1.000 green:(60.0f-changedOffset)/60.0f blue:(60.0f-changedOffset)/60.0f alpha:1.000];
-//            self.refreshImageView.layer.timeOffset = changedOffset / 180.0f;
-//            self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30 + changedOffset * 0.8, kRefreshImageHeight, kRefreshImageHeight};
-//            
-//        } else {
-//            
-//            self.topLineView.frame = (CGRect){-320, 0, 320, kProgressLineHeight};
-//            self.topLineView.backgroundColor = [UIColor whiteColor];
-//            
-//        }
-    
-//    }
-    
-//    // topBackgroundImageView
-//    if (changedOffset >= 0) {
-//        self.backgroundContainerView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.backgroundImageOffset, 320, kImageBackgroundHeight};
-//        self.backgroundImageView.frame = (CGRect){0, 60 - (changedOffset / 4), 320, kImageBackgroundHeight};
-//    } else {
-//        self.backgroundContainerView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.backgroundImageOffset, 320, kImageBackgroundHeight};
-//    }
-//
+    } else {
+        self.refreshLabel.hidden = NO;
+        
+        if (changedOffset > 60.0f) {
+            
+            self.refreshLabel.text = @"Release To Refresh";
+            self.refreshImageView.layer.timeOffset = changedOffset / 180.0f;
+            self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30 + 60.0f * 0.8, kRefreshImageHeight, kRefreshImageHeight};
+            self.refreshLabel.frame = (CGRect){70, -30 + 60.0f * 0.8, 180, kRefreshImageHeight};
+            
+        } else if (changedOffset > 0 && changedOffset <= 60.0f) {
+            
+            self.refreshLabel.text = @"Pull To Refresh";
+            self.refreshImageView.layer.timeOffset = changedOffset / 180.0f;
+            self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30 + changedOffset * 0.8, kRefreshImageHeight, kRefreshImageHeight};
+            self.refreshLabel.frame = (CGRect){70, -30 + changedOffset * 0.8, 180, kRefreshImageHeight};
+            
+        } else {
+            
+        }
+        
+    }
     
     // topBackgroundImageView
     if (changedOffset >= 0) {
@@ -487,7 +495,25 @@
 }
 
 - (void)SCScrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
-    
+    CGFloat yOffset = scrollView.contentOffset.y;
+    CGFloat changedOffset = -(yOffset + self.topViewHeight);
+    if (changedOffset > 60) {
+        if (self.refreshHandleBlock) {
+            self.isRefreshing = YES;
+            self.refreshHandleBlock(nil);
+            [self.loadingImageView.layer addAnimation:[self loadingAnimation] forKey:kLoadingRotationAnimation];
+            self.loadingImageView.frame = self.refreshImageView.frame;
+            self.loadingImageView.hidden = NO;
+            self.loadingImageView.layer.timeOffset = self.refreshImageView.layer.timeOffset;
+            self.refreshImageView.hidden = YES;
+            [UIView animateWithDuration:kAnimationDuration animations:^{
+                self.refreshLabel.alpha = 0.0f;
+            } completion:^(BOOL finished) {
+                self.refreshLabel.hidden = YES;
+                self.refreshLabel.alpha = 1.0f;
+            }];
+        }
+    }
 }
 
 #pragma mark - UIScrollViewDelegate
@@ -540,6 +566,68 @@
         view.frame = frame;
     }
 }
+
+- (CAAnimation *)refreshAnimation {
+    CABasicAnimation *rotationAnimation = [CABasicAnimation animationWithKeyPath:@"transform.rotation"];
+    rotationAnimation.fromValue = [NSNumber numberWithFloat:0];
+    rotationAnimation.toValue = [NSNumber numberWithFloat:M_PI*6];
+    rotationAnimation.duration = 1.0f;
+    return rotationAnimation;
+}
+
+- (CAAnimation *)loadingAnimation {
+    CABasicAnimation *rotationAnimation = [CABasicAnimation animationWithKeyPath:@"transform.rotation"];
+    rotationAnimation.fromValue = [NSNumber numberWithFloat:0];
+    rotationAnimation.toValue = [NSNumber numberWithFloat:M_PI*6];
+    rotationAnimation.duration = 1.0f;
+    rotationAnimation.repeatCount = 1000;
+    rotationAnimation.speed = 0.4;
+    return rotationAnimation;
+}
+
+#pragma mark - KeyValueObserve
+
+- (void)observeValueForKeyPath:(NSString *)keyPath
+                      ofObject:(id)object
+                        change:(__unused NSDictionary *)change
+                       context:(void *)context
+{
+    if (context == AFTaskCountOfBytesReceivedContext) {
+        
+        if ([keyPath isEqualToString:NSStringFromSelector(@selector(countOfBytesReceived))]) {
+            if ([object countOfBytesExpectedToReceive] > 0) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+//                    CGFloat offset = [object countOfBytesReceived] / ([object countOfBytesExpectedToReceive]*1.0f) * 320.0f;
+                });
+            }
+        }
+        
+        if ([keyPath isEqualToString:NSStringFromSelector(@selector(state))]) {
+            if ([(NSURLSessionTask *)object state] == NSURLSessionTaskStateCompleted) {
+                @try {
+                    [object removeObserver:self forKeyPath:NSStringFromSelector(@selector(state))];
+                    
+                    if (context == AFTaskCountOfBytesReceivedContext) {
+                        [object removeObserver:self forKeyPath:NSStringFromSelector(@selector(countOfBytesReceived))];
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [self.loadingImageView.layer removeAllAnimations];
+                            [UIView animateWithDuration:kAnimationDuration animations:^{
+                                self.loadingImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
+                            } completion:^(BOOL finished) {
+                                self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
+                                self.refreshImageView.hidden = NO;
+                                self.loadingImageView.hidden = YES;
+                                self.isRefreshing = NO;
+                            }];
+                        });
+                    }
+                }
+                @catch (NSException * __unused exception) {}
+            }
+        }
+    }
+}
+
 
 
 // unused method for further testing
