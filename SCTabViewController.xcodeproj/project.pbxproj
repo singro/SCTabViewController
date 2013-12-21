@@ -26,6 +26,7 @@
 		29575D4E1863EE8A00DD5217 /* SCDemoTabThreeView.m in Sources */ = {isa = PBXBuildFile; fileRef = 29575D471863EE8A00DD5217 /* SCDemoTabThreeView.m */; };
 		29575D4F1863EE8A00DD5217 /* SCDemoTabTwoView.m in Sources */ = {isa = PBXBuildFile; fileRef = 29575D491863EE8A00DD5217 /* SCDemoTabTwoView.m */; };
 		29575D501863EE8A00DD5217 /* SCDemoTopView.m in Sources */ = {isa = PBXBuildFile; fileRef = 29575D4B1863EE8A00DD5217 /* SCDemoTopView.m */; };
+		29575D531865399800DD5217 /* SCDemoTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 29575D521865399800DD5217 /* SCDemoTableViewController.m */; };
 		34309FA1B8994A26B6A3CF50 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 6705E39D89AE4C0D8C343B80 /* libPods.a */; };
 /* End PBXBuildFile section */
 
@@ -70,6 +71,8 @@
 		29575D491863EE8A00DD5217 /* SCDemoTabTwoView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SCDemoTabTwoView.m; sourceTree = "<group>"; };
 		29575D4A1863EE8A00DD5217 /* SCDemoTopView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SCDemoTopView.h; sourceTree = "<group>"; };
 		29575D4B1863EE8A00DD5217 /* SCDemoTopView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SCDemoTopView.m; sourceTree = "<group>"; };
+		29575D511865399800DD5217 /* SCDemoTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SCDemoTableViewController.h; sourceTree = "<group>"; };
+		29575D521865399800DD5217 /* SCDemoTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SCDemoTableViewController.m; sourceTree = "<group>"; };
 		6705E39D89AE4C0D8C343B80 /* libPods.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPods.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC21968913204BFA9B18D599 /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -199,6 +202,8 @@
 			children = (
 				29575D401863EE8A00DD5217 /* SCDemoViewController.h */,
 				29575D411863EE8A00DD5217 /* SCDemoViewController.m */,
+				29575D511865399800DD5217 /* SCDemoTableViewController.h */,
+				29575D521865399800DD5217 /* SCDemoTableViewController.m */,
 			);
 			path = Controller;
 			sourceTree = "<group>";
@@ -360,6 +365,7 @@
 				29575D071863EC0800DD5217 /* SCAppDelegate.m in Sources */,
 				29575D501863EE8A00DD5217 /* SCDemoTopView.m in Sources */,
 				29575D4D1863EE8A00DD5217 /* SCDemoTabOneView.m in Sources */,
+				29575D531865399800DD5217 /* SCDemoTableViewController.m in Sources */,
 				29575D2F1863ED8100DD5217 /* SCTabBaseView.m in Sources */,
 				29575D4F1863EE8A00DD5217 /* SCDemoTabTwoView.m in Sources */,
 				29575D4E1863EE8A00DD5217 /* SCDemoTabThreeView.m in Sources */,
@@ -488,6 +494,7 @@
 				GCC_PREFIX_HEADER = "SCTabViewController/SCTabViewController-Prefix.pch";
 				INFOPLIST_FILE = "SCTabViewController/SCTabViewController-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALID_ARCHS = "armv7 armv7s";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -502,6 +509,7 @@
 				GCC_PREFIX_HEADER = "SCTabViewController/SCTabViewController-Prefix.pch";
 				INFOPLIST_FILE = "SCTabViewController/SCTabViewController-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALID_ARCHS = "armv7 armv7s";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

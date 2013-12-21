@@ -11,5 +11,8 @@
 @interface SCAppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow *window;
+@property (nonatomic, strong) UIViewController *mainViewController;
+@property (nonatomic, strong) UINavigationController *naviViewController;
+@property (nonatomic, strong) UINavigationController *naviTableViewController;
 
 @end

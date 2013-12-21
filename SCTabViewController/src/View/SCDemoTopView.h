@@ -10,4 +10,7 @@
 
 @interface SCDemoTopView : SCTabBaseView
 
+@property (nonatomic, strong) NSString *descriptionText;
+@property (nonatomic, assign) BOOL expend;
+
 @end

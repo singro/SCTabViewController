@@ -15,6 +15,8 @@
     self = [super initWithFrame:frame];
     if (self) {
         
+        frame.origin.x = 0;
+
         // TableView
         self.tableView = [[UITableView alloc] initWithFrame:frame];
         self.tableView.backgroundColor = [UIColor clearColor];

@@ -8,12 +8,27 @@
 
 #import "SCAppDelegate.h"
 
+#import "SCDemoViewController.h"
+#import "SCDemoTableViewController.h"
+
 @implementation SCAppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-    // Override point for customization after application launch.
+
+    // Add as root VC
+    self.mainViewController = [[SCDemoViewController alloc] init];
+    
+    // Add as NavigationController
+    self.naviViewController = [[UINavigationController alloc] initWithRootViewController:self.mainViewController];
+    
+    // Add as pushed NavigationController
+    SCDemoTableViewController *tableVC = [[SCDemoTableViewController alloc] init];
+    self.naviTableViewController = [[UINavigationController alloc] initWithRootViewController:tableVC];
+    
+    self.window.rootViewController = self.naviViewController;
+    
     self.window.backgroundColor = [UIColor whiteColor];
     [self.window makeKeyAndVisible];
     return YES;

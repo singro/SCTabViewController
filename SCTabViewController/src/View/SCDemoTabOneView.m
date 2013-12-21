@@ -15,6 +15,8 @@
     self = [super initWithFrame:frame];
     if (self) {
         
+        frame.origin.x = 0;
+        
         // TableView
         self.tableView = [[UITableView alloc] initWithFrame:frame];
         self.tableView.backgroundColor = [UIColor clearColor];
@@ -72,7 +74,7 @@
     if (indexPath.row % 2) {
         cell.backgroundColor = [UIColor colorWithWhite:0.696 alpha:1.000];
     } else {
-        cell.backgroundColor = [UIColor whiteColor];
+        cell.backgroundColor = [UIColor colorWithRed:0.843 green:0.939 blue:1.000 alpha:1.000];
     }
     return cell;
 }
