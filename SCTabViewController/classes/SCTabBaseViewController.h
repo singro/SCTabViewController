@@ -19,8 +19,8 @@
 // Optional Setters
 @property (nonatomic)                  CGFloat  topViewHeight;     // 230.0f for default
 @property (nonatomic)                  CGFloat  tabBarHeight;      // 36.0f for default
-@property (nonatomic)                  UIImage *backgroundImage;   // White background for default
-@property (nonatomic, assign)          CGFloat  backgroundImageOffset;  // 0.0f for default
+@property (nonatomic)                  UIImage *topBackgroundImage;   // White background for default
+@property (nonatomic, assign)          CGFloat  topBackgroundImageOffset;  // 0.0f for default
 @property (nonatomic, assign)          BOOL     needBlur;          // no blur for default
 
 

@@ -25,6 +25,8 @@
         self.tabClassNameArray = @[@"SCDemoTabOneView", @"SCDemoTabTwoView", @"SCDemoTabThreeView"];
         self.tabTitles = @[@"One", @"Two", @"Three"];
         self.topClassName = @"SCDemoTopView";
+        self.topViewHeight = 155.0f;
+        self.topBackgroundImage = [UIImage imageNamed:@"image1"];
         
     }
     return self;
@@ -43,13 +45,13 @@
     testButton.backgroundColor = [UIColor colorWithRed:0.215 green:0.702 blue:1.000 alpha:1.000];
     [testButton bk_whenTapped:^{
         if (topView.expend) {
-            self.topViewHeight = 230.0f;
+            self.topViewHeight = 155.0f;
         } else {
             self.topViewHeight = 300.0f;
         }
         topView.expend = !topView.expend;
     }];
-    [self addViewToTop:testButton frame:CGRectMake(50, 100, 60, 30)];
+    [self addViewToTop:testButton frame:CGRectMake(50, 80, 60, 30)];
 }
 
 - (void)didReceiveMemoryWarning

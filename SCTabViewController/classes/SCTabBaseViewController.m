@@ -20,6 +20,9 @@
 #define kTabBarButtonBackgroundColorNormal         1.00f
 #define kTabBarButtonBackgroundColorHeighlighted   0.95f
 
+#define kImageBackgroundHeight                350.0f
+
+
 @interface SCTabBaseViewController () <SCTabBaseViewDelegate, UIScrollViewDelegate>
 
 /* Public properties */
@@ -31,8 +34,9 @@
 @property (nonatomic, strong) NSMutableArray  *addedTopViewFrameArray;
 
 // topView
-@property (nonatomic, strong) UIImageView     *topImageView;
-@property (nonatomic, strong) UIView          *topImageContainerView;
+@property (nonatomic, strong) UIImageView     *topBackgroundImageView;
+@property (nonatomic, strong) UIView          *topBackgroundContainView;
+@property (nonatomic, strong) UIView *backgroundWhiteView;
 
 // tabBarView
 @property (nonatomic, strong) UIView          *tabBarView;
@@ -49,6 +53,9 @@
 @property (nonatomic, assign) NSInteger        currentIndex;
 @property (nonatomic, assign) NSInteger        currentIndexTableHeight;
 @property (nonatomic, assign) NSInteger        numberOfTabs;
+
+// Status
+@property (nonatomic, assign) BOOL isChangingContentInset;
 
 
 /* Test properties */
@@ -70,7 +77,7 @@
         
         self.topViewHeight = 230.0f;
         self.tabBarHeight = 36.0f;
-        self.backgroundImageOffset = 0.0f;
+        self.topBackgroundImageOffset = 0.0f;
         
         // tabs
         self.tabBarButtonBackgroundColorNormal = [UIColor colorWithWhite:kTabBarButtonBackgroundColorNormal alpha:1.0f];
@@ -102,41 +109,19 @@
         self.numberOfTabs = self.tabClassNameArray.count;
         self.currentIndex = 0;
         self.currentIndexTableHeight = 0.0f;
+        self.isChangingContentInset = NO;
         
+        [self setupTopBackgroundImageView];
         [self setupTopView];
         [self setupTabBarView];
         [self setupTabView];
         
+        [self.view addSubview:self.topBackgroundContainView];
         [self.view addSubview:self.topView];
         [self.view addSubview:self.scrollView];
         [self.view addSubview:self.tabBarView];
         
         
-//        // BackgroundContainView
-//        self.backgroundContainerView = [[UIView alloc] init];
-//        self.backgroundContainerView.clipsToBounds = YES;
-//        [self.view addSubview:self.backgroundContainerView];
-//        
-//        // BackgroundImageView
-//        self.backgroundImageView = [[UIImageView alloc] init];
-//        self.backgroundImageView.backgroundColor = [UIColor whiteColor];
-//        self.backgroundWhiteView = [[UIView alloc] init];
-//        self.backgroundWhiteView.backgroundColor = [UIColor colorWithWhite:1.000 alpha:0.70];
-//        self.backgroundWhiteView.hidden = YES;
-//        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-//            if (weakSelf.needBlur) {
-//                weakSelf.backgroundImage = [weakSelf.backgroundImage blurredImageWithRadius:50 iterations:5 tintColor:[UIColor whiteColor]];
-//            }
-//            dispatch_async(dispatch_get_main_queue(), ^{
-//                weakSelf.backgroundImageView.image = weakSelf.backgroundImage;
-//                if (weakSelf.needBlur) {
-//                    weakSelf.backgroundWhiteView.hidden = NO;
-//                }
-//            });
-//        });
-//        [self.backgroundContainerView addSubview:self.backgroundImageView];
-//        [self.backgroundImageView addSubview:self.backgroundWhiteView];
-//        //        [self.backgroundImageView bringSubviewToFront:self.backgroundWhiteView];
         
         // topView
         
@@ -204,17 +189,54 @@
     CGFloat previousTopViewHeight = self.topViewHeight;
     _topViewHeight = topViewHeight;
     
+    self.isChangingContentInset = YES;
+    
     CGFloat topViewOffset = self.topViewHeight - previousTopViewHeight;
     
+    if (self.tabViewArray.count) {
+        UITableView *scrollView = [(SCTabBaseView *)self.tabViewArray[0] tableView];
+        CGFloat changedOffset = -(scrollView.contentOffset.y - topViewOffset+ self.topViewHeight);
+        
+        // reset added views
+        [self setAddedTopViewFrameWithOffset:changedOffset];
+        
+        // set background ImageView
+        [UIView animateWithDuration:0.3f animations:^{
+            if (changedOffset >= 0) {
+                self.topBackgroundContainView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.topBackgroundImageOffset, 320, kImageBackgroundHeight};
+                self.topBackgroundImageView.frame = (CGRect){0, 60 - (changedOffset / 4), 320, kImageBackgroundHeight};
+            } else {
+                self.topBackgroundContainView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.topBackgroundImageOffset, 320, kImageBackgroundHeight};
+            }
+        }];
+        
+        // set TabBar View
+        [UIView animateWithDuration:0.3f animations:^{
+            if (changedOffset + self.topViewHeight - self.tabBarHeight < 0) {
+                self.tabBarView.frame = (CGRect){0, -1, 320, self.tabBarHeight};
+            } else {
+                self.tabBarView.frame = (CGRect){0, self.topViewHeight - self.tabBarHeight + changedOffset, 320, self.tabBarHeight};
+            }
+        }];
+    }
+    
+    // set tableViews
     [self visitTableViews:^(UITableView *tableView, NSInteger index) {
+        if (index == self.currentIndex) {
+            NSLog(@"offset:%.f", tableView.contentOffset.y);
+        }
         CGFloat offsetOriginX = tableView.contentOffset.x;
         CGFloat offsetOriginY = tableView.contentOffset.y;
         [UIView animateWithDuration:0.3f animations:^{
             tableView.contentOffset = (CGPoint){offsetOriginX, offsetOriginY - topViewOffset};
         } completion:^(BOOL finished) {
             tableView.contentInset = UIEdgeInsetsMake(self.topViewHeight, 0., 0., 0.);
+            self.isChangingContentInset = NO;
         }];
     }];
+    
+    
+    
 }
 
 - (void)addViewToTop:(UIView *)view frame:(CGRect)frame {
@@ -228,6 +250,34 @@
 
 
 #pragma mark - setupViews
+- (void)setupTopBackgroundImageView {
+    __weak typeof(SCTabBaseViewController) *weakSelf = self;
+    
+    // BackgroundContainView
+    self.topBackgroundContainView = [[UIView alloc] init];
+    self.topBackgroundContainView.clipsToBounds = YES;
+
+    // BackgroundImageView
+    self.topBackgroundImageView = [[UIImageView alloc] init];
+    self.topBackgroundImageView.backgroundColor = [UIColor whiteColor];
+    self.backgroundWhiteView = [[UIView alloc] init];
+    self.backgroundWhiteView.backgroundColor = [UIColor colorWithWhite:1.000 alpha:0.70];
+    self.backgroundWhiteView.hidden = NO;
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        if (weakSelf.needBlur) {
+//            weakSelf.topBackgroundImage = [weakSelf.topBackgroundImage blurredImageWithRadius:50 iterations:5 tintColor:[UIColor whiteColor]];
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            weakSelf.topBackgroundImageView.image = weakSelf.topBackgroundImage;
+            if (weakSelf.needBlur) {
+                weakSelf.backgroundWhiteView.hidden = NO;
+            }
+        });
+    });
+    [self.topBackgroundContainView addSubview:self.topBackgroundImageView];
+    [self.topBackgroundImageView addSubview:self.backgroundWhiteView];
+}
+
 - (void)setupTopView {
     if (self.topClassName) {
         self.topView = [(UIView *)[[NSClassFromString(self.topClassName) class] alloc] init];
@@ -337,10 +387,12 @@
     } else {
         screenHeight += 20.0f;
     }
-//    NSLog(@"layout. navi: %.f screen: %.f", naviHeight, screenHeight);
-//    
-//    NSLog(@"navibar: %@", NSStringFromCGRect(self.navigationController.navigationBar.frame));
     
+    // backgroundImageView
+    self.topBackgroundContainView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight - self.topBackgroundImageOffset, 320, kImageBackgroundHeight};
+    self.topBackgroundImageView.frame = (CGRect){0, 60, 320, kImageBackgroundHeight};
+    self.backgroundWhiteView.frame = (CGRect){0, 0, 320, kImageBackgroundHeight};
+
     // Top View
     self.topView.frame = (CGRect){0, 0, 320, self.topViewHeight};
     
@@ -361,7 +413,10 @@
 
 - (void)SCScrollViewDidScroll:(UIScrollView *)scrollView {
     CGFloat changedOffset = -(scrollView.contentOffset.y + self.topViewHeight);
-    //        NSLog(@"changedOffset:    %f", changedOffset);
+        NSLog(@"changedOffset:    %f", changedOffset);
+    if (self.isChangingContentInset) {
+        return;
+    }
 //    if (self.isRefreshing) {
 //        self.topLineView.frame = (CGRect){0, 0, 320, kProgressLineHeight};
 //    } else {
@@ -396,6 +451,15 @@
 //        self.backgroundContainerView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.backgroundImageOffset, 320, kImageBackgroundHeight};
 //    }
 //
+    
+    // topBackgroundImageView
+    if (changedOffset >= 0) {
+        self.topBackgroundContainView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.topBackgroundImageOffset, 320, kImageBackgroundHeight};
+        self.topBackgroundImageView.frame = (CGRect){0, 60 - (changedOffset / 4), 320, kImageBackgroundHeight};
+    } else {
+        self.topBackgroundContainView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.topBackgroundImageOffset, 320, kImageBackgroundHeight};
+    }
+
     // AddedTopView
     [self setAddedTopViewFrameWithOffset:changedOffset];
     
