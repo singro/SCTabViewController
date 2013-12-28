@@ -11,18 +11,18 @@
 #import <BlocksKit.h>
 #import <BlocksKit+UIKit.h>
 //#import "SPUIImage+Blur.h"
-//#import <objc/runtime.h>
+#import <objc/runtime.h>
 
 #import "SCTabBaseView.h"
 
 #define kTablButtonTagOffset 6666
 
-#define kTabBarTextColorNormal                     0.55f
+#define kTabBarTextColorNormal                     0.65f
 #define kTabBarTextColorHeighlighted               0.36f
 #define kTabBarButtonBackgroundColorNormal         1.00f
-#define kTabBarButtonBackgroundColorHeighlighted   0.95f
+#define kTabBarButtonBackgroundColorHeighlighted   0.97f
 
-#define kImageBackgroundHeight                     350.0f
+#define kImageBackgroundHeight                     500.0f
 
 #define kRefreshImageHeight                        18.0f
 #define kRefreshImagePositionX                     290.0f
@@ -40,10 +40,10 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
 /* Public properties */
 @property (nonatomic, strong, readwrite) UIView *topView;
 @property (nonatomic, strong, readwrite) NSMutableArray *tabViewArray;
-@property (nonatomic, strong, readwrite) NSMutableArray *addedTopViewArray;  // UIView
+@property (nonatomic, strong, readwrite) NSMutableDictionary *addedTopViewDictionary;  // UIView
 
 /* Private properties */
-@property (nonatomic, strong) NSMutableArray  *addedTopViewFrameArray;
+@property (nonatomic, strong) NSMutableDictionary  *addedTopViewFrameDictionary;
 
 // Refresh View
 @property (nonatomic, strong) UIImageView *refreshImageView;
@@ -59,7 +59,7 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
 // tabBarView
 @property (nonatomic, strong) UIView          *tabBarView;
 @property (nonatomic, strong) UIView          *tabBarSectionLineView;
-@property (nonatomic, strong) void           (^tabButtonHandleBlock)(NSInteger);
+@property (nonatomic, strong) void           (^tabButtonBlock)(NSInteger);
 @property (nonatomic, strong) NSMutableArray  *tabBarButtonArray;
 @property (nonatomic, strong) UIColor         *tabBarButtonBackgroundColorNormal;
 @property (nonatomic, strong) UIColor         *tabBarButtonBackgroundColorHeighlighted;
@@ -68,16 +68,17 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
 
 // tabView
 @property (nonatomic, strong) UIScrollView    *scrollView;
-@property (nonatomic, assign) NSInteger        currentIndex;
 @property (nonatomic, assign) NSInteger        currentIndexTableHeight;
 @property (nonatomic, assign) NSInteger        numberOfTabs;
 
 // Status
 @property (nonatomic, assign) BOOL isChangingContentInset;
+@property (nonatomic, assign) BOOL willRefreshing;
+@property (nonatomic, assign) BOOL didRefreshing;
+@property (nonatomic, assign) BOOL isInit;
 
 
 /* Test properties */
-@property (nonatomic, strong) UIBarButtonItem *actionBarItem;
 @property (nonatomic, strong) UIButton        *testButton;
 
 @end
@@ -90,8 +91,8 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
     if (self) {
         self.tabViewArray = [[NSMutableArray alloc] init];
         self.tabBarButtonArray = [[NSMutableArray alloc] init];
-        self.addedTopViewArray = [[NSMutableArray alloc] init];
-        self.addedTopViewFrameArray = [[NSMutableArray alloc] init];
+        self.addedTopViewDictionary = [[NSMutableDictionary alloc] init];
+        self.addedTopViewFrameDictionary = [[NSMutableDictionary alloc] init];
         
         self.topViewHeight = 230.0f;
         self.tabBarHeight = 36.0f;
@@ -100,10 +101,10 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
         // tabs
         self.tabBarButtonBackgroundColorNormal = [UIColor colorWithWhite:kTabBarButtonBackgroundColorNormal alpha:1.0f];
         self.tabBarButtonBackgroundColorHeighlighted = [UIColor colorWithWhite:kTabBarButtonBackgroundColorHeighlighted alpha:1.000];
-        self.tabBarButtonBorderColor = [UIColor colorWithWhite:0.852 alpha:1.000];
+        self.tabBarButtonBorderColor = [UIColor colorWithWhite:0.959 alpha:1.000];
         self.tabBarTextColorNormal = [UIColor colorWithWhite:kTabBarTextColorNormal alpha:1.000];
         self.tabBarTextColorHeighlighted = [UIColor colorWithWhite:kTabBarTextColorHeighlighted alpha:1.000];
-        self.tabBarSectionLineColor = [UIColor colorWithRed:1.000 green:0.336 blue:0.162 alpha:1.000];
+        self.tabBarSectionLineColor = KFontColorOrange;
         self.tabBarTextFont = [UIFont systemFontOfSize:13.0f];
         
         self.needBlur = NO;
@@ -123,13 +124,16 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
         }
         
         self.edgesForExtendedLayout = UIRectEdgeNone;
-        self.automaticallyAdjustsScrollViewInsets = YES;
+//        self.automaticallyAdjustsScrollViewInsets = YES;
         
         self.numberOfTabs = self.tabClassNameArray.count;
         self.currentIndex = 0;
         self.currentIndexTableHeight = 0.0f;
         self.isChangingContentInset = NO;
         self.isRefreshing = NO;
+        self.willRefreshing = NO;
+        self.didRefreshing = YES;
+        self.isInit = YES;
         
         [self setupTopBackgroundImageView];
         [self setupTopView];
@@ -154,12 +158,6 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
 {
     [super viewDidLoad];
     
-    self.navigationController.navigationItem.rightBarButtonItem = self.actionBarItem;
-}
-
-- (void)viewDidAppear:(BOOL)animated {
-//    UIButton *tabButton = [self.tabBarButtonArray objectAtIndex:self.currentIndex];
-//    tabButton.layer.timeOffset = 1.0f;
 }
 
 - (void)didReceiveMemoryWarning
@@ -210,9 +208,6 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
     
     // set tableViews
     [self visitTableViews:^(UITableView *tableView, NSInteger index) {
-//        if (index == self.currentIndex) {
-//            NSLog(@"offset:%.f", tableView.contentOffset.y);
-//        }
         CGFloat offsetOriginX = tableView.contentOffset.x;
         CGFloat offsetOriginY = tableView.contentOffset.y;
         [UIView animateWithDuration:0.3f animations:^{
@@ -230,8 +225,35 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
 - (void)addViewToTop:(UIView *)view frame:(CGRect)frame {
     if ([view isKindOfClass:[UIView class]]) {
         [self.view addSubview:view];
-        [self.addedTopViewArray addObject:view];
-        [self.addedTopViewFrameArray addObject:[NSValue valueWithCGRect:frame]];
+        NSString *key = [NSString stringWithFormat:@"%p", view];
+        [self.addedTopViewDictionary setObject:view forKey:key];
+        [self.addedTopViewFrameDictionary setObject:[NSValue valueWithCGRect:frame] forKey:key];
+        view.frame = frame;
+    }
+}
+
+- (void)resetView:(UIView *)view withFrame:(CGRect)frame {
+    if ([view isKindOfClass:[UIView class]]) {
+        NSString *key = [NSString stringWithFormat:@"%p", view];
+        [self.addedTopViewFrameDictionary setObject:[NSValue valueWithCGRect:frame] forKey:key];
+        if (self.isInit) {
+            view.frame = frame;
+        } else {
+            [UIView animateWithDuration:kAnimationDuration animations:^{
+                view.frame = frame;
+            } completion:^(BOOL finished) {
+                self.isInit = NO;
+            }];
+        }
+    }
+}
+
+
+- (void)setAddedTopViewFrameWithOffset:(CGFloat)offset {
+    for (NSString *key in self.addedTopViewDictionary.allKeys) {
+        UIView *view = [self.addedTopViewDictionary objectForKey:key];
+        CGRect frame = [[self.addedTopViewFrameDictionary objectForKey:key] CGRectValue];
+        frame.origin.y += offset;
         view.frame = frame;
     }
 }
@@ -278,7 +300,6 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
     self.loadingImageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"refresh"]];
     self.loadingImageView.contentMode = UIViewContentModeScaleAspectFill;
     [self.view addSubview:self.loadingImageView];
-    self.loadingImageView.hidden = YES;
     
     // Animation
     [self.refreshImageView.layer addAnimation:[self refreshAnimation] forKey:kRefreshRotationAnimation];
@@ -296,7 +317,7 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
 - (void)setupTabBarView {
     __weak typeof(SCTabBaseViewController) *weakSelf = self;
     
-    self.tabButtonHandleBlock = ^(NSInteger index) {
+    self.tabButtonBlock = ^(NSInteger index) {
         CGRect visibleRect = (CGRect){320*index, 0, 320, weakSelf.scrollView.contentSize.height};
         [weakSelf.scrollView scrollRectToVisible:visibleRect animated:YES];
     };
@@ -319,7 +340,7 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
         // buttonAction
         [tabButton bk_addEventHandler:^(UIButton* button){
             NSInteger index = button.tag - kTablButtonTagOffset;
-            weakSelf.tabButtonHandleBlock(index);
+            weakSelf.tabButtonBlock(index);
         } forControlEvents:UIControlEventTouchUpInside];
         
         if (i == 0) {
@@ -338,6 +359,7 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
 }
 
 - (void)setupTabView {
+    
     // ScrollView
     self.scrollView = [[UIScrollView alloc] init];
     self.scrollView.backgroundColor = [UIColor clearColor];
@@ -347,7 +369,6 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
     self.scrollView.bounces = NO;
     
     // tabViews
-//    CGFloat naviHeight = CGRectGetHeight(self.navigationController.navigationBar.frame);
     CGFloat screenHeight = CGRectGetHeight([[UIScreen mainScreen] applicationFrame]);
     if (self.navigationController.navigationBar.barPosition == UIBarPositionTopAttached) {
         screenHeight -= 44.0f;
@@ -355,18 +376,12 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
         screenHeight += 20.0f;
     }
     
-//    NSLog(@"load. navi: %.f \n screen: %.f", naviHeight, screenHeight);
     for (int i = 0; i < self.tabClassNameArray.count; i ++) {
         CGRect rect = (CGRect){320 * i, 0, 320, screenHeight};
         UIView *view = [[[NSClassFromString(self.tabClassNameArray[i]) class] alloc] initWithFrame:rect];
         [self.scrollView addSubview:view];
         [self.tabViewArray addObject:view];
     }
-    
-    CGFloat botomOffset = 0.0f;
-    //        if (!self.navigationController.navigationBar.isHidden) {
-    //            botomOffset = 20.0f;
-    //        }
     
     // tabViews
     NSInteger index = 0;
@@ -375,7 +390,7 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
             SCTabBaseView *baseView = (SCTabBaseView *)view;
             baseView.delegate = self;
             UITableView *tableView = baseView.tableView;
-            tableView.contentInset = UIEdgeInsetsMake(self.topViewHeight, 0., botomOffset, 0.);
+            tableView.contentInset = UIEdgeInsetsMake(self.topViewHeight, 0., 0., 0.);
             tableView.contentOffset = (CGPoint){0, - self.topViewHeight};
             tableView.backgroundColor = [UIColor clearColor];
             tableView.autoresizingMask = UIViewAutoresizingFlexibleHeight;
@@ -388,9 +403,8 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
 #pragma mark - LayoutSubviews
 
 - (void)viewWillLayoutSubviews {
-//    CGFloat naviHeight = 0.0f; //CGRectGetHeight(self.navigationController.navigationBar.frame);
+    
     CGFloat screenHeight = CGRectGetHeight([[UIScreen mainScreen] applicationFrame]);
-//    NSLog(@"barPosition: %d height: %.f", self.navigationController.navigationBar.barPosition, screenHeight);
     if (self.navigationController.navigationBar.barPosition == UIBarPositionTopAttached) {
         screenHeight -= 44.0f;
     } else {
@@ -421,6 +435,7 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
     // scroll View
     self.scrollView.frame = (CGRect){0, 0, 320, screenHeight};
     self.scrollView.contentSize = (CGSize){320 * self.tabClassNameArray.count, screenHeight};
+    
 }
 
 #pragma mark - SCTabBaseViewDelegate
@@ -435,8 +450,41 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
         tableView.contentOffset = scrollView.contentOffset;
     }];
     
+    
+    // topBackgroundImageView
+    if (changedOffset >= 0) {
+        self.topBackgroundContainView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.topBackgroundImageOffset, 320, kImageBackgroundHeight};
+        self.topBackgroundImageView.frame = (CGRect){0, 60 - (changedOffset / 4), 320, kImageBackgroundHeight};
+    } else {
+        self.topBackgroundContainView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.topBackgroundImageOffset, 320, kImageBackgroundHeight};
+    }
+    
+    // AddedTopView
+    [self setAddedTopViewFrameWithOffset:changedOffset];
+    
+    // topView
+    self.topView.frame = (CGRect){0, changedOffset, 320, self.topViewHeight};
+    
+    // tabBarView
+    if (changedOffset + self.topViewHeight - self.tabBarHeight < 0) {
+        self.tabBarView.frame = (CGRect){0, -1, 320, self.tabBarHeight};
+    } else {
+        self.tabBarView.frame = (CGRect){0, self.topViewHeight - self.tabBarHeight + changedOffset, 320, self.tabBarHeight};
+    }
+    
     if (self.isRefreshing) {
-//        self.topLineView.frame = (CGRect){0, 0, 320, kProgressLineHeight};
+//        self.loadingImageView.frame = (CGRect){kRefreshImagePositionX, -30 + 60.0f * 0.8, kRefreshImageHeight + changedOffset, kRefreshImageHeight};
+        
+        if (changedOffset >= 0.0f) {
+            
+            self.loadingImageView.frame = (CGRect){kRefreshImagePositionX, -30 + 60.0f * 0.8, kRefreshImageHeight, kRefreshImageHeight};
+
+        } else {
+            
+            self.loadingImageView.frame = (CGRect){kRefreshImagePositionX, -30 + 60.0f * 0.8 +changedOffset, kRefreshImageHeight, kRefreshImageHeight};
+            
+        }
+
     } else {
         self.refreshLabel.hidden = NO;
         
@@ -454,37 +502,8 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
             self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30 + changedOffset * 0.8, kRefreshImageHeight, kRefreshImageHeight};
             self.refreshLabel.frame = (CGRect){70, -30 + changedOffset * 0.8, 180, kRefreshImageHeight};
             
-        } else {
-            
         }
-        
     }
-    
-    // topBackgroundImageView
-    if (changedOffset >= 0) {
-        self.topBackgroundContainView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.topBackgroundImageOffset, 320, kImageBackgroundHeight};
-        self.topBackgroundImageView.frame = (CGRect){0, 60 - (changedOffset / 4), 320, kImageBackgroundHeight};
-    } else {
-        self.topBackgroundContainView.frame = (CGRect){0, self.topViewHeight - kImageBackgroundHeight + changedOffset - self.topBackgroundImageOffset, 320, kImageBackgroundHeight};
-    }
-
-    // AddedTopView
-    [self setAddedTopViewFrameWithOffset:changedOffset];
-    
-    // topView
-    self.topView.frame = (CGRect){0, changedOffset, 320, self.topViewHeight};
-    
-    // tabBarView
-//    NSLog(@"%.f", changedOffset + self.topViewHeight - self.tabBarHeight);
-    if (changedOffset + self.topViewHeight - self.tabBarHeight < 0) {
-        self.tabBarView.frame = (CGRect){0, -1, 320, self.tabBarHeight};
-    } else {
-        self.tabBarView.frame = (CGRect){0, self.topViewHeight - self.tabBarHeight + changedOffset, 320, self.tabBarHeight};
-    }
-    
-}
-
-- (void)SCScrollViewDidEndDecelerating:(UIScrollView *)scrollView {
     
 }
 
@@ -498,22 +517,27 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
     CGFloat yOffset = scrollView.contentOffset.y;
     CGFloat changedOffset = -(yOffset + self.topViewHeight);
     if (changedOffset > 60) {
-        if (self.refreshHandleBlock) {
-            self.isRefreshing = YES;
-            self.refreshHandleBlock(nil);
-            [self.loadingImageView.layer addAnimation:[self loadingAnimation] forKey:kLoadingRotationAnimation];
-            self.loadingImageView.frame = self.refreshImageView.frame;
-            self.loadingImageView.hidden = NO;
-            self.loadingImageView.layer.timeOffset = self.refreshImageView.layer.timeOffset;
-            self.refreshImageView.hidden = YES;
-            [UIView animateWithDuration:kAnimationDuration animations:^{
-                self.refreshLabel.alpha = 0.0f;
-            } completion:^(BOOL finished) {
-                self.refreshLabel.hidden = YES;
-                self.refreshLabel.alpha = 1.0f;
-            }];
+//        self.willRefreshing = YES;
+        if (!self.isRefreshing) {
+            if (self.refreshBlock) {
+                [self beginRefreshing];
+                self.refreshBlock();
+            }
         }
+    } else {
+//        self.willRefreshing = NO;
     }
+}
+
+- (void)SCScrollViewDidEndDecelerating:(UIScrollView *)scrollView {
+//    if (self.willRefreshing) {
+//        if (!self.isRefreshing) {
+//            if (self.refreshBlock) {
+//                [self beginRefreshing];
+//                self.refreshBlock();
+//            }
+//        }
+//    }
 }
 
 #pragma mark - UIScrollViewDelegate
@@ -543,6 +567,16 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
         currentButton.backgroundColor = [UIColor colorWithWhite:kTabBarButtonBackgroundColorHeighlighted+backgroundColorOffset*colorOffset alpha:1.0f];
         currentButton.titleLabel.textColor = [UIColor colorWithWhite:kTabBarTextColorHeighlighted+textColorOffset*colorOffset alpha:1.0f];
         nextButton.titleLabel.textColor = [UIColor colorWithWhite:kTabBarTextColorNormal-textColorOffset*colorOffset alpha:1.0f];
+    } else {
+        NSLog(@"Error Scroll handle");
+    }
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
+    if ([scrollView isKindOfClass:[UIScrollView class]]) {
+        CGFloat xOffset = scrollView.contentOffset.x;
+        NSInteger index = xOffset / 320.0f;
+        self.currentIndex = index;
     }
 }
 
@@ -555,15 +589,6 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
             tableView(baseView.tableView, index);
         }
         index ++;
-    }
-}
-
-- (void)setAddedTopViewFrameWithOffset:(CGFloat)offset {
-    NSInteger index = 0;
-    for (UIView *view in self.addedTopViewArray) {
-        CGRect frame = [[self.addedTopViewFrameArray objectAtIndex:index] CGRectValue];
-        frame.origin.y += offset;
-        view.frame = frame;
     }
 }
 
@@ -583,6 +608,70 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
     rotationAnimation.repeatCount = 1000;
     rotationAnimation.speed = 0.4;
     return rotationAnimation;
+}
+
+- (void)beginRefreshing {
+    if (self.refreshBlock) {
+        self.isRefreshing = YES;
+        self.didRefreshing = NO;
+        self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30 + 60.0f * 0.8, kRefreshImageHeight, kRefreshImageHeight};
+        [self.loadingImageView.layer addAnimation:[self loadingAnimation] forKey:kLoadingRotationAnimation];
+        self.loadingImageView.frame = (CGRect){kRefreshImagePositionX, -30 + 60.0f * 0.8, kRefreshImageHeight, kRefreshImageHeight};
+        self.loadingImageView.hidden = NO;
+        self.loadingImageView.layer.timeOffset = self.refreshImageView.layer.timeOffset;
+        self.refreshImageView.hidden = YES;
+        self.willRefreshing = YES;
+        [UIView animateWithDuration:kAnimationDuration animations:^{
+            self.refreshLabel.alpha = 0.0f;
+        } completion:^(BOOL finished) {
+            self.refreshLabel.hidden = YES;
+            self.refreshLabel.alpha = 1.0f;
+            self.willRefreshing = NO;
+            if (!self.willRefreshing) {
+                [self endRefreshing];
+            }
+        }];
+    }
+}
+
+- (void)endRefreshing {
+    if (!self.willRefreshing) {
+//        [self.loadingImageView.layer removeAllAnimations];
+        NSLog(@"loading.frame Out: %@", NSStringFromCGRect(self.loadingImageView.frame));
+//        self.loadingImageView.hidden = NO;
+//        self.refreshImageView.hidden = NO;
+        [UIView animateWithDuration:kAnimationDuration animations:^{
+            self.loadingImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
+            self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
+            NSLog(@"loading.frame In: %@", NSStringFromCGRect(self.loadingImageView.frame));
+        } completion:^(BOOL finished) {
+            self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
+            self.refreshLabel.frame = (CGRect){70, -30, 180, kRefreshImageHeight};
+            self.loadingImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
+            self.refreshImageView.hidden = NO;
+            self.loadingImageView.hidden = YES;
+            self.refreshLabel.hidden = YES;
+            self.isRefreshing = NO;
+            self.willRefreshing = NO;
+            self.didRefreshing = YES;
+        }];
+    }
+}
+
+- (UIBarButtonItem *)createActionBarItem {
+    UIBarButtonItem *actionBarItem = [[UIBarButtonItem alloc] bk_initWithImage:[UIImage imageNamed:@"NaviBar_Icon_Action"] style:UIBarButtonItemStyleDone handler:self.actionBarItemBlock];
+    [actionBarItem setBackButtonBackgroundImage:[UIImage imageNamed:@"NaviBar_Icon_Action"] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    [actionBarItem setBackButtonBackgroundImage:[UIImage imageNamed:@"NaviBar_Icon_Action_Highlighted"] forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+    return actionBarItem;
+}
+
+- (UIBarButtonItem *)createBackBarItem {
+    UIBarButtonItem *backBarItem = [[UIBarButtonItem alloc] bk_initWithImage:[UIImage imageNamed:@"NaviBar_Icon_Back"] style:UIBarButtonItemStyleDone handler:^(id sender) {
+        [self.navigationController popViewControllerAnimated:YES];
+    }];
+    [backBarItem setBackButtonBackgroundImage:[UIImage imageNamed:@"NaviBar_Icon_Back"] forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+    [backBarItem setBackButtonBackgroundImage:[UIImage imageNamed:@"NaviBar_Icon_Back_Highlighted"] forState:UIControlStateHighlighted barMetrics:UIBarMetricsDefault];
+    return backBarItem;
 }
 
 #pragma mark - KeyValueObserve
@@ -610,15 +699,7 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
                     if (context == AFTaskCountOfBytesReceivedContext) {
                         [object removeObserver:self forKeyPath:NSStringFromSelector(@selector(countOfBytesReceived))];
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            [self.loadingImageView.layer removeAllAnimations];
-                            [UIView animateWithDuration:kAnimationDuration animations:^{
-                                self.loadingImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
-                            } completion:^(BOOL finished) {
-                                self.refreshImageView.frame = (CGRect){kRefreshImagePositionX, -30, kRefreshImageHeight, kRefreshImageHeight};
-                                self.refreshImageView.hidden = NO;
-                                self.loadingImageView.hidden = YES;
-                                self.isRefreshing = NO;
-                            }];
+                            [self endRefreshing];
                         });
                     }
                 }
@@ -662,8 +743,6 @@ static void * AFTaskCountOfBytesReceivedContext = &AFTaskCountOfBytesReceivedCon
     returnB = (toB - fromB) * offset + fromB;
     returnA = (toA - fromA) * offset + fromA;
     
-//    NSLog(@"from R: %2f G: %2f B: %2f A: %2f ", fromR, fromG, fromB, fromA);
-//    NSLog(@"to   R: %2f G: %2f B: %2f A: %2f ", toR, toG, toB, toA);
     NSLog(@"chan R: %2f G: %2f B: %2f A: %2f ", returnR, returnG, returnB, returnA);
     UIColor *returnColor = [[UIColor alloc] initWithRed:returnR green:returnG blue:returnB alpha:returnA];
     //[UIColor colorWithRed:returnR green:returnG blue:returnB alpha:returnA]

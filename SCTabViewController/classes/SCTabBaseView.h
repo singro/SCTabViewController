@@ -10,11 +10,12 @@
 
 @protocol SCTabBaseViewDelegate;
 
-@interface SCTabBaseView : UIView <UIScrollViewDelegate, UITableViewDelegate, UITableViewDataSource>
+@interface SCTabBaseView : UIView <UIScrollViewDelegate>
 
 @property (nonatomic) UITableView *tableView;
 
 @property (nonatomic, assign) id<SCTabBaseViewDelegate> delegate;
+@property (nonatomic, assign) UINavigationController *naviViewController;
 
 @end
 

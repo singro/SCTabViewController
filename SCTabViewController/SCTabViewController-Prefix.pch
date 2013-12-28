@@ -14,3 +14,6 @@
     #import <UIKit/UIKit.h>
     #import <Foundation/Foundation.h>
 #endif
+
+
+#define KFontColorOrange [UIColor colorWithRed:1.00f green:0.40f blue:0.31f alpha:1.00f]

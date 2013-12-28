@@ -31,11 +31,12 @@
         
         
         __weak typeof(SCDemoViewController) *weakSelf = self;
-        self.refreshHandleBlock = ^(id sender) {
+        self.refreshBlock = ^() {
             NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
             AFURLSessionManager *manager = [[AFURLSessionManager alloc] initWithSessionConfiguration:configuration];
             
             NSURL *URL = [NSURL URLWithString:@"http://daswallpaper.de/wp-content/gallery/das_wallpaper_startseite/science_fiction_18-hd-wallpaper-kostenlos-1920x1080.jpg"];
+//            NSURL *URL = [NSURL URLWithString:@"http://img3.douban.com/icon/u73872098-2.jpg"];
             NSURLRequest *request = [NSURLRequest requestWithURL:URL];
             
             NSProgress *progress =[[NSProgress alloc] init];
@@ -72,7 +73,7 @@
             testButton.frame = CGRectMake(50, 80, 200, 30);
         } else {
             self.topViewHeight = 300.0f;
-            testButton.frame = CGRectMake(50, 80, 200, 120);
+            testButton.frame = CGRectMake(50, 80, 200, 30);
         }
         topView.expend = !topView.expend;
     }];
